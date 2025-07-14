@@ -38,7 +38,39 @@ def generate_wallet_qr(wallet_address: str):
     buffer.seek(0)
     return buffer
 
-# === Fetch and Sum Payments ===
+# === Payment Check for Specific User ===
+def check_user_payment(user_wallet_address: str):
+    url = "https://api.etherscan.io/api"
+    params = {
+        "module": "account",
+        "action": "txlist",
+        "address": WALLET_ADDRESS,
+        "startblock": 0,
+        "endblock": 99999999,
+        "sort": "desc",
+        "apikey": ETHERSCAN_API_KEY
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        if data["status"] != "1":
+            return False
+
+        for tx in data["result"]:
+            if (
+                tx["to"].lower() == WALLET_ADDRESS.lower()
+                and tx["from"].lower() == user_wallet_address.lower()
+                and float(tx["value"]) / 10**18 >= MIN_AMOUNT_ETH
+            ):
+                return True
+
+        return False
+    except Exception as e:
+        st.error(f"Payment check failed: {e}")
+        return False
+
+# === Pot Size Fetching ===
 def get_total_eth_received(min_eth: float = MIN_AMOUNT_ETH) -> Decimal:
     url = "https://api.etherscan.io/api"
     params = {
@@ -75,16 +107,14 @@ def get_total_eth_received(min_eth: float = MIN_AMOUNT_ETH) -> Decimal:
         st.warning(f"⚠️ Unable to fetch pot size: {e}")
         return Decimal("0.0")
 
-# === Payment Checker ===
-def check_eth_payment():
-    return get_total_eth_received() >= Decimal(str(MIN_AMOUNT_ETH))
-
-# === Main Paywall Function ===
+# === Main Paywall Logic ===
 def crypto_paywall():
     st.title("🎰 Guess Loto")
 
     if "paid" not in st.session_state:
         st.session_state.paid = False
+    if "user_wallet_address" not in st.session_state:
+        st.session_state.user_wallet_address = ""
 
     if not st.session_state.paid:
         st.markdown("### 🔒 Access Locked")
@@ -95,6 +125,11 @@ def crypto_paywall():
         st.markdown("### 📱 Scan QR Code to Pay")
         qr_image = generate_wallet_qr(WALLET_ADDRESS)
         st.image(qr_image, caption="ETH Wallet QR Code", width=200)
+
+        # Wallet input
+        st.markdown("### 🧾 Enter Your Wallet Address (Sender)")
+        wallet_input = st.text_input("Your ETH Wallet Address", value=st.session_state.user_wallet_address)
+        st.session_state.user_wallet_address = wallet_input.strip()
 
         # Real-Time Pot Calculation
         last_check_time = st.session_state.get("last_check_time", 0)
@@ -114,14 +149,13 @@ def crypto_paywall():
         - Rollover to next round: **{carryover:.6f} ETH**
         """)
 
-        # Payment Button
         if st.button("🔍 Check Payment"):
-            if check_eth_payment():
+            if wallet_input and check_user_payment(wallet_input):
                 st.success("✅ Payment confirmed! You can now play.")
                 st.session_state.paid = True
                 st.rerun()
             else:
-                st.warning("❌ No payment detected. Try again in a few seconds.")
+                st.warning("❌ No matching payment from your wallet detected. Try again in a few seconds.")
 
         # Game Description
         st.markdown("---")
