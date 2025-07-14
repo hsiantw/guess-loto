@@ -1,5 +1,9 @@
 RNG_game/
 ├── guess_game_app.py
-├── crypto_paywall.py
-├── guesses.json   <-- (auto-created on first guess)
-├── winners.json   <-- (from previous step)
+├── secure_crypto_paywall.py
+├── winners.json
+├── .env              ← 🟢 Your .env goes here
+├── pot.json
+├── guesses.json
+├── requirements.txt
+└── ...

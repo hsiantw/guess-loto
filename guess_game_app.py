@@ -2,7 +2,9 @@ import streamlit as st
 import random
 import json
 import os
-from crypto_paywall import crypto_paywall  # Make sure this file exists
+from secure_crypto_paywall import crypto_paywall
+
+crypto_paywall()
 
 # === Configurations ===
 GUESSES_FILE = "guesses.json"
@@ -53,9 +55,6 @@ def add_to_pot(amount):
     with open(POT_FILE, "w") as f:
         json.dump({"pot_eth": new_total}, f, indent=2)
     return new_total
-
-# === (Optional) Crypto Paywall ===
-crypto_paywall()  # You can comment this out if testing locally
 
 # === Game State Initialization ===
 if "number_to_guess" not in st.session_state:
