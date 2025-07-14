@@ -1,4 +1,4 @@
-kimport streamlit as st
+import streamlit as st
 import random
 import json
 import os
